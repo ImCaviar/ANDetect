@@ -8,10 +8,8 @@ public class Twig {
     private List<Edge> edges;
 
     public Twig(List<PackagePoint> twig) {
-        //twig是从叶子节点自底向上的顺序排列的
         this.twig = twig;
         this.edges = new ArrayList<>();
-        //生成边
         for (int i=0; i<twig.size()-1; i++){
             Edge edge = new Edge(this.twig.get(i+1).getLabel(), this.twig.get(i).getLabel());
             this.edges.add(edge);
