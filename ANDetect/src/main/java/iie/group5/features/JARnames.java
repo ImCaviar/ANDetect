@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-//读取AD_Network_info.csv中的SDK_name和aar_jar_path
+// Read SDK_name and aar_jar_path from AD_Network_info.csv
 public class JARnames {
     private Map<String, String> path2pkg;
 
@@ -18,7 +18,7 @@ public class JARnames {
     }
 
     public void genMap() throws IOException, CsvValidationException {
-        CSVReader reader = new CSVReader(new FileReader("resources/AD_Network_info.csv"));
+        CSVReader reader = new CSVReader(new FileReader("src/main/resources/AD_Network_info.csv"));
         String[] nextLine;
         while ((nextLine = reader.readNext()) !=null){
             this.path2pkg.put(nextLine[1], nextLine[0]);
