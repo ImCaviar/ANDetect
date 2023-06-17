@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-//读取final_API_features.csv和final_string_features.csv中的项
+// Retrieve the items in final_API_features.csv and final_string_features.csv.
 public class StringAndAPI {
     private List<String> strings;
     private List<String> APIs;
@@ -21,7 +21,7 @@ public class StringAndAPI {
     }
 
     private void genStrings() throws IOException, CsvValidationException {
-        CSVReader reader = new CSVReader(new FileReader("resources/features/final_string_features.csv"));
+        CSVReader reader = new CSVReader(new FileReader("src/main/resources/features/final_string_features.csv"));
         String[] nextLine;
         while ((nextLine = reader.readNext()) !=null){
             this.strings.add(nextLine[0]);
@@ -29,7 +29,7 @@ public class StringAndAPI {
     }
 
     private void genAPIs() throws IOException, CsvValidationException {
-        CSVReader reader = new CSVReader(new FileReader("resources/features/final_API_features.csv"));
+        CSVReader reader = new CSVReader(new FileReader("src/main/resources/features/final_API_features.csv"));
         String[] nextLine;
         while ((nextLine = reader.readNext())!=null){
             this.APIs.add(nextLine[0]);
