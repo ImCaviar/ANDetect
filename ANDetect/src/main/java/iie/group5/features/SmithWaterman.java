@@ -3,20 +3,20 @@ package iie.group5.features;
 import java.util.Arrays;
 import java.util.Stack;
 
-//用SW算法计算序列匹配度
+// Calculate sequence matching with SW algorithm
 public class SmithWaterman {
     private int[][] H;
     private boolean[][] notEmpty;
-    //两个待匹配的字符串序列
+    // A sequence of two strings to be matched
     private String[] anInv;
     private String[] subInv;
-    //空格、匹配、不匹配的得分
+    // Score for blank, match, mismatch
     private static int SPACE;
     private static int MATCH;
     private static int DISMATCH;
-    //最大匹配度的坐标
+    // Coordinates of the maximum match
     private int maxIndM, maxIndN;
-    //最终匹配序列
+    // Final matching sequence
     private Stack<String> stk1, stk2;
 
     public SmithWaterman(String[] anInv, String[] subInv) {
@@ -25,7 +25,7 @@ public class SmithWaterman {
         int m = this.anInv.length;
         int n = this.subInv.length;
         this.H = new int[m+1][n+1];
-        //初始化为false
+        // Initialize to false
         this.notEmpty = new boolean[m+1][n+1];
         SPACE = 1;
         MATCH = 3;
@@ -111,7 +111,7 @@ public class SmithWaterman {
         }
     }
 
-    //计算序列匹配度
+    // Calculate the sequence matching degree
     public double pctMacth(){
         int m = this.anInv.length;
         int n = this.subInv.length;
@@ -126,7 +126,7 @@ public class SmithWaterman {
         return score/sum;
     }
 
-    //序列化栈中字符串
+    // Serialize the string in the stack
     public void outputSTK(){
         System.out.println("--------Seq 1-------");
         String seq1 = "";
