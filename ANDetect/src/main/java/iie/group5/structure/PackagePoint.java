@@ -7,19 +7,19 @@ import java.util.List;
 
 //APK或模块的包结构，也是树结构
 public class PackagePoint implements Serializable {
-    //节点ID
+    // Node ID
     private Integer id;
-    //节点标签，也就是包名
+    // Node labels, also known as package names
     private String label;
-    //父节点ID，如果是根节点则设置为null
+    // Parent node ID, set to null if it is the root node
     private Integer parentId;
-    //子节点ID列表
+    // List of child node IDs
     private transient List<Integer> childrenID;
-    //节点代表的完整包名
+    // The full package name represented by the node
     private transient String pkgName;
-    //社区贡献度，在社区中连接其它节点的次数
+    // Community contribution, the number of connections to other nodes in the community
     private transient Integer contribute;
-    //停止处理的终止符
+    // Terminator to stop processing
     private transient boolean term;
 
     public PackagePoint() {
@@ -45,7 +45,7 @@ public class PackagePoint implements Serializable {
         this.contribute = packagePoint.getContribute();
     }
 
-    //添加子节点ID
+    // Add child node ID
     public void addChildID(Integer cID){
         this.childrenID.add(cID);
     }
