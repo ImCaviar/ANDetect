@@ -6,7 +6,7 @@ import iie.group5.structure.Module;
 
 import java.util.*;
 
-//利用结构、代码特征进行匹配
+// Matching using structure, code features
 public class MatchbySC {
     private Module AN;
     private Module subM;
