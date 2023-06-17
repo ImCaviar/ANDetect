@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-//Smali文件结构
+//Smali file structure
 public class Smali implements Serializable {
     //class name
     private String clazz;
