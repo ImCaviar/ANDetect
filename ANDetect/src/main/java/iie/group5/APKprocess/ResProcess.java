@@ -1,45 +1,40 @@
 package iie.group5.APKprocess;
 
-import com.codyi.xml2axml.test.Main;
-import com.hq.arscresourcesparser.arsc.ArscFile;
 import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 
-//处理资源文件，包括AndroidManifest.xml和assets/res文件夹下的资源文件，并生成资源特征
+// Process resource files, including those in the AndroidManifest.xml and assets/res folders, and generate resource features
 public class ResProcess {
-    //F1 AndroidManifest.xml_manifest_package 全域匹配android:name
+    //F1 AndroidManifest.xml_manifest_package android:name
     private HashSet<String> all_an;
-    //F2 AndroidManifest.xml_manifest uses-permission_android:name 完全路径匹配-固定特征
+    //F2 AndroidManifest.xml_manifest uses-permission_android:name
     private HashSet<String> permission;
-    //F3 AndroidManifest.xml_manifest application provider_android:authorities 完全路径匹配-固定特征
+    //F3 AndroidManifest.xml_manifest application provider_android:authorities
     private HashSet<String> auth;
-    //F4 AndroidManifest.xml_manifest application receiver intent-filter action_android:name 完全路径匹配-固定特征
+    //F4 AndroidManifest.xml_manifest application receiver intent-filter action_android:name
     private HashSet<String> intentFilter;
-    //F5 AndroidManifest.xml_manifest application activity_android:name 完全路径匹配-可变特征
+    //F5 AndroidManifest.xml_manifest application activity_android:name
     private HashSet<String> activity;
-    //F6 AndroidManifest.xml_manifest application service_android:name 完全路径匹配-可变特征
+    //F6 AndroidManifest.xml_manifest application service_android:name
     private HashSet<String> service;
-    //F7 AndroidManifest.xml_manifest application receiver_android:name 完全路径匹配-可变特征
+    //F7 AndroidManifest.xml_manifest application receiver_android:name
     private HashSet<String> receiver;
-    //F8 res\values\values.xml_resources dimen_name 无路径匹配
+    //F8 res\values\values.xml_resources dimen_name
     private HashSet<String> dimen;
-    //F9 res\values\values.xml_resources string_name 无路径匹配
+    //F9 res\values\values.xml_resources string_name
     private HashSet<String> stringn;
-    //F10 res\values\values.xml_resources declare-styleable attr_name 无路径匹配
+    //F10 res\values\values.xml_resources declare-styleable attr_name
     private HashSet<String> attr;
-    //F11 res\values\values.xml_resources style_name 无路径匹配
+    //F11 res\values\values.xml_resources style_name
     private HashSet<String> style;
-    //资源图片名称池
+    // Resource image name pool
     private HashSet<String> picNames;
-    //host应用程序包名
+    // host application package name
     private String hostPKG;
 
     public ResProcess() {
@@ -55,47 +50,10 @@ public class ResProcess {
         this.attr = new HashSet<>();
         this.style = new HashSet<>();
         this.picNames = new HashSet<>();
+        this.hostPKG = "";
     }
 
-    //传入AM.xml所在地址，和输出地址，对AM.xml的二进制文件进行解析，并将其转换成文本文件
-    public void transAM(String binFile, String outputAM) throws Exception{
-        //直接调用xml2axml-2.0.1.jar包的main函数
-        Main am = new Main();
-        String[] args = new String[]{"d",binFile, outputAM};
-        am.main(args);
-    }
-
-    //传入resources.arsc所在地址和输出地址，对resources.arcs进行解析，输出xml文件
-    public void transARSC(String binFile, String outputARSC) throws Exception{
-        //模仿ArscResourcesParser.class
-        String xml = "";
-        File file = new File(binFile);
-        FileInputStream fin = new FileInputStream(file);
-        byte[] buf = new byte[(int)file.length()];
-        fin.read(buf);
-        ArscFile arscFile = new ArscFile();
-        arscFile.parse(buf);
-        xml = arscFile.buildPublicXml();
-        fin.close();
-        //处理xml
-        String newXML = "";
-        String[] xml_line = xml.split("\n");
-        for (int i=0; i<xml_line.length; i++){
-            int ind = xml_line[i].lastIndexOf(" data=");
-            if (ind != -1){
-                xml_line[i] = xml_line[i].substring(0, ind) + "/>";
-            }
-            xml_line[i] += "\n";
-            newXML += xml_line[i];
-        }
-        //输出xml保存到outputARSC中
-        File output = new File(outputARSC);
-        FileOutputStream fos = new FileOutputStream(output);
-        fos.write(newXML.getBytes());
-        fos.close();
-    }
-
-    //解析资源文件，提取特征列表，返回host应用程序包名
+    // Parse the resource file, extract the feature list, and return the host application package name
     public String parseRes(String AMFile, String ARSCFile, String zipPath) throws Exception {
         parseAM(AMFile);
         parseARSC(ARSCFile);
@@ -103,17 +61,22 @@ public class ResProcess {
         return getHostPKG();
     }
 
-    //解析AM.xml文件，提取特征F1-F7
+    // Parse AM.xml file and extract features F1-F7
     public void parseAM(String AMFile) throws Exception {
-        //创建Reader对象，加载xml
+        // First modify the AM.xml generated by APKTool
+        File newAM = editAN(AMFile);
+        // Create Reader object, load xml
         SAXBuilder reader = new SAXBuilder();
-        InputStream is = new FileInputStream(new File(AMFile));
+        InputStream is = new FileInputStream(newAM);
         Document document = reader.build(is);
-        //获取根节点，记录路径（父元素和子元素间用空格分隔，元素和属性间用_分隔）和属性值
+        // Get the root node, record the path (separated by spaces between parent and child elements, _ between elements and attributes) and attribute values
         Map<String,List<String>> ele2attr = new HashMap<>();
         Element root = document.getRootElement();
-        recGetEle(root, "", ele2attr);
-        //解析ele2attr中的元素和属性值
+        recGetEle(root, "", ele2attr, "");
+        // Consider the spliced LAUNCHER activity
+        String launcher = "";
+        String pack = "";
+        // Parsing elements and attribute values in ele2attr
         for (String key : ele2attr.keySet()){
             String prefix = key.split("_")[0];
             String suffix = key.split("_")[1];
@@ -131,19 +94,34 @@ public class ResProcess {
                         this.service.add(l);
                     }else if (prefix.equals("manifest application receiver")){
                         this.receiver.add(l);
+                    }else if (prefix.equals("manifest application activity intent-filter category") && l.contains("android.intent.category.LAUNCHER") && launcher.equals("")){
+                        if (l.contains(";")){
+                            String last = l.split(";")[1];
+                            int ind = last.lastIndexOf(".");
+                            launcher = last.substring(0, ind);
+                        }
                     }
-                }else if (suffix.equals("android:authorities") && prefix.equals("manifest application provider")){
+                }else if (suffix.equals("android:authorities") && prefix.equals("manifest application provider")) {
                     this.auth.add(l);
                 }else if (suffix.equals("package") && prefix.equals("manifest")){
-                    this.hostPKG = l;
+                    pack = l;
                 }
             }
         }
+        if (!launcher.equals("")){
+            if (launcher.charAt(0)=='.'){
+                this.hostPKG = pack + launcher;
+            }else{
+                this.hostPKG = launcher;
+            }
+        }else{
+            this.hostPKG = pack;
+        }
     }
 
-    //递归获取元素和属性值
-    private void recGetEle(Element element, String path, Map<String,List<String>> ele2attr){
-        //如果element有属性，则插入ele2attr中
+    // Get element and attribute values recursively
+    private void recGetEle(Element element, String path, Map<String,List<String>> ele2attr, String last){
+        // If element has attributes, insert them into ele2attr
         List<Attribute> attributes = element.getAttributes();
         String pre;
         if (!path.equals("")){
@@ -153,33 +131,67 @@ public class ResProcess {
         }
         if (attributes.size() > 0){
             for (Attribute a : attributes){
-                String key = pre+"_"+a.getQualifiedName();
+                String qn = a.getQualifiedName();
+                String key = pre+"_"+qn;
+                String value = a.getValue();
+                // When the path_property is manifest application activity_android:name, record the value and pass it to the next recursion
+                if (key.equals("manifest application activity_android:name")){
+                    last = value;
+                }else if (key.equals("manifest application activity intent-filter category_android:name") && value.equals("android.intent.category.LAUNCHER") && !last.equals("")){
+                    value = value + ";" + last;
+                    last = "";
+                }
                 if (ele2attr.containsKey(key)){
-                    ele2attr.get(key).add(a.getValue());
+                    ele2attr.get(key).add(value);
                 }else{
                     List<String> list = new ArrayList<>();
-                    list.add(a.getValue());
+                    list.add(value);
                     ele2attr.put(key, list);
                 }
             }
         }
-        //递归子节点
+        // Recursive child nodes
         List<Element> children = element.getChildren();
         for (Element child : children){
-            recGetEle(child, pre, ele2attr);
+            recGetEle(child, pre, ele2attr, last);
         }
     }
 
-    //解析public.xml文件，提取特征F8-F11
+    // If Apktool cannot fully parse AM.xml, then collate android:= to android:name=
+    private File editAN(String AMFile) throws IOException {
+        File AM_file = new File(AMFile);
+        String newAM = AMFile.replace(".xml","_out.xml");
+        File new_AM = new File(newAM);
+        BufferedReader reader = new BufferedReader(new FileReader(AM_file));
+        BufferedWriter writer = new BufferedWriter(new FileWriter(new_AM));
+        String line = reader.readLine();
+        while (line != null){
+            if (!line.contains("android:name=")){
+                line = line.replaceFirst("android:=","android:name=");
+            }
+            int ascii = 97;
+            while (line.contains("android:=")){
+                line = line.replaceFirst("android:=", "android:"+(char)(ascii)+"=");
+                ascii ++;
+            }
+            writer.write(line + "\n");
+            line = reader.readLine();
+        }
+        writer.flush();
+        writer.close();
+        return new_AM;
+    }
+
+    // Parse the public.xml file and extract features F8-F11
     private void parseARSC(String ARSCFile) throws Exception {
-        //创建Reader对象，加载xml
+        // Create Reader object, load xml
         SAXBuilder reader = new SAXBuilder();
         InputStream is = new FileInputStream(new File(ARSCFile));
         Document document = reader.build(is);
-        //获取根节点，记录路径（父元素和子元素间用空格分隔，元素和属性间用_分隔）和属性值
+        // Get the root node, record the path (separated by spaces between parent and child elements, _ between elements and attributes) and attribute values
         Element root = document.getRootElement();
         List<Element> children = root.getChildren();
-        //解析子元素中的元素和属性值
+        // Parsing element and attribute values in child elements
         for (Element child : children){
             String ele = child.getName();
             if (!ele.equals("public")){
@@ -227,9 +239,9 @@ public class ResProcess {
         }
     }
 
-    //根据解压主目录，找到资源图片目录，提取资源图片名称池
+    // According to the decompression home directory, find the resource image directory and extract the resource image name pool
     private void paresPic(String zipPath){
-        //遍历assets文件夹下的所有文件，res下关于drawable中的所有字符串名称
+        // Iterate through all the files in the assets folder, res about all the string names in drawable
         String suffix1 = zipPath + "assets";
         String suffix2 = zipPath + "res";
         File file1 = new File(suffix1);
@@ -250,21 +262,21 @@ public class ResProcess {
         }
     }
 
-    //遍历文件夹下的所有文件，并存入this.picNames中
+    // Iterate through all the files in the folder and store them in this.picNames
     private void findPic(File file){
         if (file != null && file.exists()){
             String filename = file.getName();
             if (file.isDirectory()){
-                //是文件夹就继续向下遍历，是文件就判断其前缀后缀
+                // If it's a folder, continue traversing down, if it's a file, determine its prefix and suffix
                 File [] subFiles = file.listFiles();
                 if (subFiles != null){
                     for (File f : subFiles){
-                        //递归，本节点的id作为下一节点的parentId
+                        // Recursively, the id of this node is used as the parentId of the next node
                         findPic(f);
                     }
                 }
             }else{
-                //去除公共前缀，查找公共后缀
+                // Remove public prefixes and find public suffixes
                 List<String> common_prefix = Arrays.asList("btn","abc","ic","icon");
                 List<String> pic_suffix = Arrays.asList("xbm","tif","pjp","svgz","jpg","jpeg","ico","tiff","gif","svg","jfif","webp","png","bmp","pjpeg","avif");
                 if (filename.contains("_")){
