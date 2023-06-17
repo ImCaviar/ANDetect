@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//序列化Module对象们，并存储在resources/features文件夹下
+// Serialize the Module objects and store them in the resources/features folder
 public class SerialObj {
     private Map<String, List<Module>> modClass;
     private Kryo kryo;
@@ -64,8 +64,7 @@ public class SerialObj {
     }
 
     public void outputSER() throws IOException {
-        //创建序列化对象，根据模块名称把modules保存在不同文件中
-        String prefix = "resources/features/ser/";
+        String prefix = "src/main/resources/features/ser/";
         for (String name : this.modClass.keySet()){
             String suffix = name + ".ser";
             writeIn(prefix+suffix, this.modClass.get(name));
@@ -73,7 +72,6 @@ public class SerialObj {
     }
 
     private void writeIn(String path, List<Module> modules) throws IOException {
-        //用kryo序列化
         FileOutputStream fos = new FileOutputStream(path);
         Output output = new Output(fos);
         for (Module m : modules){
@@ -84,13 +82,11 @@ public class SerialObj {
     }
 
     public void inputSER() throws IOException{
-        //读取序列化对象
-        String prefix = "resources/features/ser/";
+        String prefix = "src/main/resources/features/ser/";
         File file = new File(prefix);
         File [] subFiles = file.listFiles();
         if (subFiles != null){
             for (File f : subFiles){
-                //找到每一个ser文件并反序列化
                 String ser = f.getPath();
                 try {
                     readIn(ser);
@@ -105,16 +101,14 @@ public class SerialObj {
 
     public void inputSERsingle(String serName) throws IOException{
         //读取序列化对象
-        String path = "resources/features/ser/" + serName + ".ser";
+        String path = "src/main/resources/features/ser/" + serName + ".ser";
         readIn(path);
     }
 
     private void readIn(String path) throws IOException{
-        //获取ser文件名
         int inds = path.lastIndexOf("/");
         int inde = path.lastIndexOf(".ser");
         String name = path.substring(inds+1, inde);
-        //用kryo序列化
         FileInputStream fis = new FileInputStream(path);
         Input input = new Input(fis);
         List<Module> modList = new ArrayList<>();
@@ -143,12 +137,11 @@ public class SerialObj {
     }
 
     public void setSerPath() {
-        String prefix = "resources/features/ser/";
+        String prefix = "src/main/resources/features/ser/";
         File file = new File(prefix);
         File [] subFiles = file.listFiles();
         if (subFiles != null){
             for (File f : subFiles){
-                //找到每一个ser文件并反序列化
                 String ser = f.getName();
                 this.serPath.add(ser.replace(".ser",""));
             }
