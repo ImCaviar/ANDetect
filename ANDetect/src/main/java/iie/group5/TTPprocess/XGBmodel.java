@@ -11,12 +11,11 @@ public class XGBmodel {
     private Booster api_method;
 
     public XGBmodel() throws XGBoostError {
-        this.api_count = XGBoost.loadModel("resources/model/xgb_model_count.json");
-        this.api_clazz = XGBoost.loadModel("resources/model/xgb_model_clazz.json");
-        this.api_method = XGBoost.loadModel("resources/model/xgb_model_method.json");
+        this.api_count = XGBoost.loadModel("src/main/resources/model/xgb_model_count.json");
+        this.api_clazz = XGBoost.loadModel("src/main/resources/model/xgb_model_clazz.json");
+        this.api_method = XGBoost.loadModel("src/main/resources/model/xgb_model_method.json");
     }
 
-    //为一条数据进行分类 fr为0.0时表示AN，fr为1.0时表示NAN
     public float[] classify(float[] APIc, float[] APIcl, float[] APIm) throws Exception {
         float missing = 0.0f;
         DMatrix api_count_matrix = new DMatrix(APIc, 1, APIc.length, missing);
