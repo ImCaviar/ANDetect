@@ -11,117 +11,128 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//模块解耦
+// Module decoupling
 public class MDecouple {
-    //smali文件路径
-    private File file;
-    //初始模块
+    //smali file path
+    private List<File> file;
+    // Initial module
     private Module initModule;
-    //解耦后的模块列表
+    // List of decoupled modules
     private List<Module> modules;
-    //PackagePoint节点计数器
-    private static Integer ppCount = 0;
+    // PackagePoint node counter
+    private Integer ppCount;
     //PPID<->PP
     private Map<Integer, PackagePoint> packagePoints;
-    //全局变量记录smali文件下的所有节点
+    // Global variables record all nodes under smali file
     private List<Smali> smalis;
-    //PPID<->社区ID
+    //PPID<->Community ID
     private Map<Integer, Integer> PPID2commID;
-    //是否加固
+    // Reinforced or not
     private boolean shelled;
 
 
-    //构造函数
-    public MDecouple(String filePath) {
-        this.file = new File(filePath);
+    public MDecouple(List<String> filePath) {
+        this.file = new ArrayList<>();
+        for (String f : filePath){
+            File tmpF = new File(f);
+            this.file.add(tmpF);
+        }
         this.modules = new ArrayList<>();
         this.packagePoints = new HashMap<>();
         this.smalis = new ArrayList<>();
         this.PPID2commID = new HashMap<>();
         this.shelled = true;
+        this.ppCount = 0;
     }
 
-    //可获取解耦后的模块
+    // Access to decoupled modules
     public List<Module> getModules() {
         return modules;
     }
 
-    //模块解耦
     public void decoupling(String hostPKG){
-        //遍历file下的所有文件夹和文件
+        // Iterate through all folders and files under file
         System.out.println("Building package TREEs and Analyzing Smali files!");
-        //去除最后一个.后的字符串后匹配效果会更好
+        // Removing the last . string after the last one will match better
         int ind = hostPKG.lastIndexOf(".");
-        hostPKG = hostPKG.substring(0, ind);
-        String host = hostPKG.replace(".", "/");
-
-        findFiles(this.file, null, host);
+        String host = "";
+        if (ind != -1){
+            hostPKG = hostPKG.substring(0, ind);
+            host = hostPKG.replace(".", "\\");
+        }
+        // Building the root node
+        Integer id = ppCount ++;
+        PackagePoint packagePoint = new PackagePoint(id, "classes", null);
+        this.packagePoints.put(id, packagePoint);
+        // Generate more nodes for folders
+        for (File f : this.file){
+            findFiles(f, id, host);
+        }
         if (this.shelled){
-            //被加固，直接返回，不解耦
+            // If is hardened and returned directly, not decoupled
             return;
         }
 
-        //初始化社区
+        // Initialize community
         Graph community = new Graph();
-        //根据每个smali文件中调用的自定义函数，生成函数调用图
+        // Generate function call graphs based on the custom functions called in each smali file
         genGraphbyPkg(community);
-        //构建完所有的包节点和smali节点、生成图后生成初始化的Module
+        // After building all the package nodes and smali nodes and generating the graph, generate the initialized Module
         this.initModule = new Module(this.packagePoints, this.smalis);
 
-        //Louvain算法进行社区划分
+        // Louvain for community segmentation
         System.out.println("Module Decoupling by Louvain!");
         community.singleLouvain();
 //        community.outputComm();
-        //自底向上合并社区
+        // Bottom-up community consolidation
         mergeComm(community);
 //        outputComm();
-        //分隔子模块
+        // Segmentation sub-module
         splitSubModule();
-        outputNoName();
+//        outputNoName();
     }
 
-    //遍历file下的所有文件，排除hostPKG中的文件夹和文件
+    // Iterate through all files under file, excluding folders and files in hostPKG
     private void findFiles(File file, Integer parentId, String host){
         if (file != null && file.exists()){
             String filePath = file.getPath();
-            if (filePath.contains(host)){
+            if (!host.equals("") && filePath.contains(host)){
                 this.shelled = false;
                 return;
             }
             String fileName = file.getName();
             if (file.isDirectory()){
-                //file是文件夹，构建节点
+                // If file is a folder, build the node
                 Integer id = ppCount ++;
                 PackagePoint packagePoint = new PackagePoint(id, fileName, parentId);
                 this.packagePoints.put(id, packagePoint);
                 File [] subFiles = file.listFiles();
                 if (subFiles != null){
                     for (File f : subFiles){
-                        //递归，本节点的id作为下一节点的parentId
+                        // Recursively, the id of this node is used as the parentId of the next node
                         findFiles(f, id, host);
                     }
                 }
             }else if (fileName.endsWith(".smali")){
-                //file是smali文件，构建Smali类
+                // If file is a smali file, build the Smali class
                 Smali smali = new Smali(parentId);
-                //!!!解析每个smali文件!!!
                 smali.analyzeSmali(filePath);
                 this.smalis.add(smali);
             }
         }
     }
 
-    //用包名作为图节点
+    // Use package names as graph nodes
     private void genGraphbyPkg(Graph community){
         System.out.println("Add Vertices ......");
         for (Smali i : this.smalis){
-            //为每个包生成一个节点，不考虑重复包，不考虑空包
+            // Generate a node for each package, disregarding duplicate packages and disregarding empty packages
             Integer ppID = i.getPpID();
             String pkg = getPkg(i.getClazz());
             if (!community.inGraph(pkg) && !pkg.equals("")){
                 community.insertVertex(pkg);
             }
-            //为smali的父节点设置完整包名
+            // Set the full package name for smali's parent node
             PackagePoint pp = this.packagePoints.get(ppID);
             if (pp.getPkgName().equals("")){
                 pp.setPkgName(pkg);
@@ -129,13 +140,13 @@ public class MDecouple {
         }
         System.out.println("Generating Call Graph ......");
         for (Smali i: this.smalis){
-            //提取包中每个类继承关系，生成边，继承关系边权重为5
+            // Extract each class inheritance relationship in the package, generate edges, inheritance relationship edge weight of 5
             String supPkg = getPkg(i.getSupper());
             String pkg = getPkg(i.getClazz());
             if (community.inGraph(supPkg) && !supPkg.equals(pkg) && !pkg.equals("")){
                 community.insertEdge(supPkg, pkg, 5);
             }
-            //提取类间函数调用关系，生成边，计次生成边权重
+            // Extract the function call relationship between classes, generate edges, and count the generated edge weights
             String[] invokes = i.getInvoke();
             for (int ind=0; ind<invokes.length; ind++){
                 if (invokes[ind] != null){
@@ -143,7 +154,7 @@ public class MDecouple {
                     if (classn.contains("[")){
                         classn = classn.replace("[", "");
                     }
-                    //只有当该smali调用的是自定义函数，且调用的不是类中定义的函数时才添加边
+                    // Add an edge only if the smali call is a custom function and the call is not to a function defined in the class
                     classn = getPkg(classn);
                     if (community.inGraph(classn) && !pkg.equals("")){
                         i.setInvoketoCtm(ind);
@@ -156,9 +167,9 @@ public class MDecouple {
         }
     }
 
-    //获取类所在包名
+    // Get the package name of the class
     private String getPkg(String clazz){
-        //如果没有包名则返回空
+        // Returns null if there is no package name
         String result = "";
         if (clazz.contains("/")){
             int ind = clazz.lastIndexOf("/");
@@ -167,51 +178,51 @@ public class MDecouple {
         return result;
     }
 
-    //自底向上合并社区
+    // Bottom-up community consolidation
     private void mergeComm(Graph community){
-        //根据community的结果初始化每个PP节点的社区
+        // Initialize the community of each PP node based on the result of community
         for (Integer i : this.packagePoints.keySet()){
             String pkg = this.packagePoints.get(i).getPkgName();
             Integer commID = -1;
-            int contribute = 0;
             if (!pkg.equals("")){
                 commID = community.commIDbyLable(pkg);
-                contribute = community.commContribute(pkg);
+                int contribute = community.commContribute(pkg);
                 this.initModule.setContribute(i, contribute);
             }
             this.PPID2commID.put(i, commID);
         }
-        //设置flag
+        // Set flags
         boolean flag = true;
         while (flag){
             flag = false;
-            //获取未终止的PP列表
+            // Get the list of unterminated PPs
             List<Integer> ppList = this.initModule.getDfsPPList();
             for (Integer i : ppList){
                 Map<Integer, PackagePoint> ppMap = this.initModule.getPackagePoints();
                 PackagePoint pp = ppMap.get(i);
                 Integer ppCommID = this.PPID2commID.get(pp.getId());
                 if (pp.getParentId() != null && this.PPID2commID.get(pp.getParentId()) != -1){
-                    // 如果PP有父节点且父节点有社区ID，则将PP节点的社区ID设置为父节点的社区ID
+                    // If PP has a parent node and the parent node has a community ID, the parent node community ID->PP community ID
                     this.PPID2commID.put(pp.getId(), this.PPID2commID.get(pp.getParentId()));
                     String parentPkg = this.packagePoints.get(pp.getParentId()).getPkgName();
                     String pkgName = parentPkg + "/" + pp.getLabel();
                     this.initModule.setPKGbyID(pp.getId(), pkgName);
                     flag = true;
                     pp.setTerm(true);
+                    // Unlock all children of the PP node
                     this.initModule.unlockChild(pp.getId());
                 }else if (pp.getChildrenID().size() > 0 &&  ppCommID != -1){
-                    // 如果PP有社区ID但其父节点不存在或无社区ID，则将PP终止
-                    //可以通过改变pp来改变this.initModule中的节点终止符
+                    // Terminate PP if it has child nodes with community IDs
+                    // The node terminator in this.initModule can be changed by changing the pp
                     pp.setTerm(true);
                 }else if(pp.getChildrenID().size() > 0 && ppCommID == -1){
-                    // 如果PP有子节点且无社区ID，则将子节点中超过半数的社区ID作为PP的社区ID，并将这些子节点包名中的公共部分作为PP节点包名
+                    // If the PP has child nodes and no community ID, the community ID of the child nodes that exceeds factor σ is used as the community ID of the PP, and the common part of these child node packet names is used as the PP node packet name
                     Map<Integer, Integer> commID2num = new HashMap<>();
                     Map<Integer, String> commID2pkg = new HashMap<>();
                     double sum = 0;
                     double sort = 0;
                     boolean process = true;
-                    // 如果PP的子节点中存在无社区ID，则下一轮再处理
+                    // If there is no community ID in the child node of PP, it will be processed again in the next round
                     for (Integer child : pp.getChildrenID()){
                         Integer childCommID = this.PPID2commID.get(child);
                         if (childCommID == -1){
@@ -221,7 +232,7 @@ public class MDecouple {
                             if (!commID2num.containsKey(childCommID)){
                                 commID2num.put(childCommID, 1);
                                 String pkg = getPkg(this.initModule.findPKGbyID(child));
-                                // PP节点完整包名为空，则停止合并
+                                // PP node complete package name is empty, then stop merging
                                 if (pkg.equals("")){
                                     pp.setTerm(true);
                                     process = false;
@@ -261,7 +272,7 @@ public class MDecouple {
                             this.initModule.unlockChild(pp.getId());
                             break;
                         }
-                        //如果commID2pkg保持一致，并且/的数量大于等于2，子节点的社区归属各不相同===>把节点的社区ID设置为社区内部节点最多的子节点社区
+                        // If commID2pkg remains consistent and the number of /'s is greater than or equal to 2, the community attribution of the child nodes varies ===> set the community ID of the node to the community of the child node with the most nodes within the community
                         if (pkgNum == 1 && sum == sort){
                             String tmp = lastPkg.replace("/", "");
                             int count = lastPkg.length()-tmp.length();
@@ -276,21 +287,16 @@ public class MDecouple {
                         pp.setTerm(true);
                     }
                 }else {
-                    //PP无子节点，则将其终止
-                    //如果PP无社区ID，则是因为不同路径下有重复的包名对应的社区ID
-                    if (this.PPID2commID.get(pp.getId()) == -1){
-                        this.initModule.findParenttoRoot(pp.getId());
-                        System.out.printf("Point %d is leaf node and has no Community?\n", pp.getId());
-                    }else {
-                        pp.setTerm(true);
-                    }
+                    // PP has no child node, then terminate it
+                    // If the PP does not have a community ID, it is because there are duplicate package names corresponding to community IDs in different paths, or it may be because the path where the PP is located is the path where host is located
+                    pp.setTerm(true);
                 }
             }
             this.initModule.updatePPList();
         }
     }
 
-    //给定一个map，返回其中社区ID中节点数量最多的社区ID
+    // Given a map, return the community ID with the highest number of nodes in the community ID
     private Integer countPPinComm(Map<Integer,Integer> commID2num){
         Map<Integer, List<Integer>> commID2PPID = new HashMap<>();
         for (Integer i : this.PPID2commID.keySet()){
@@ -317,7 +323,7 @@ public class MDecouple {
     }
 
 
-    //输出同一社区中的所有节点ID及其名称
+    // Output all node IDs and their names in the same community
     private void outputComm(){
         Map<Integer, List<Integer>> commID2PPID = new HashMap<>();
         for (Integer i : this.PPID2commID.keySet()){
@@ -342,9 +348,9 @@ public class MDecouple {
         }
     }
 
-    //合并同一社区ID下的所有节点为一个模块，并赋予该模块pkg名称
+    // Merge all nodes under the same community ID into one module, and give the module pkg name
     private void splitSubModule(){
-        //记录同一社区中所有节点ID
+        // Record all node IDs in the same community
         Map<Integer, List<Integer>> commID2PPID = new HashMap<>();
         for (Integer i : this.PPID2commID.keySet()){
             Integer commID = this.PPID2commID.get(i);
@@ -359,7 +365,7 @@ public class MDecouple {
                 commID2PPID.put(commID, ppList);
             }
         }
-        //对同一社区中的所有节点构造子模块，并生成子模块名称
+        // Construct submodules for all nodes in the same community and generate submodule names
         for (Integer commID : commID2PPID.keySet()){
             List<Integer> ppList = commID2PPID.get(commID);
             if (ppList.size() > 0){
@@ -375,7 +381,7 @@ public class MDecouple {
                         }
                     }
                 }
-                //树的根节点数量决定是否需要新建节点，需要新建节点，则需要改变所有子树根节点的父节点ID，设置模块名
+                // The number of root nodes of the tree determines whether new nodes are needed, and if new nodes are needed, the parent node IDs of all root nodes of the subtree need to be changed and the module name set
                 List<PackagePoint> roots = getRootfromTrees(newPP);
                 if (roots.size() == 1){
                     for (PackagePoint pp : newPP){
@@ -392,24 +398,23 @@ public class MDecouple {
                         }
                     }
                 }
-                //合并同label和同pkgName的节点，嫁接其子节点
+                // Merge nodes with the same label and the same pkgName, and graft their children
                 mergeSamePP(newPP, newSmali);
-                //把newPP下的节点处理成新节点
+                // Process the nodes under newPP into new nodes
                 for (int i=0; i<newPP.size(); i++){
                     newPP.set(i, new PackagePoint(newPP.get(i)));
                 }
                 Module module = new Module(newPP, newSmali);
                 genModuleName(module);
-//                module.showTree();
                 this.modules.add(module);
             }
         }
     }
 
-    //返回一个PP节点列表是否构成一棵完整的树，返回树的根节点
+    // Returns whether a list of PP nodes constitutes a complete tree, returning the root node of the tree
     private List<PackagePoint> getRootfromTrees(List<PackagePoint> trees){
         List<PackagePoint> roots = new ArrayList<>();
-        //遍历每个节点，如果父节点在trees中，则继续找其父节点，直到某节点的父节点不在trees中，则插入到roots中
+        // Iterate through each node, and if the parent node is in trees, continue to find its parent until the parent node of a node is not in trees, then insert it into roots
         for (PackagePoint pp : trees){
             PackagePoint tmp = pp;
             while (trees.contains(this.packagePoints.get(tmp.getParentId()))){
@@ -422,18 +427,18 @@ public class MDecouple {
         return roots;
     }
 
-    //根据模块中节点的pkgName前缀构建模块名称
+    // Build the module name based on the pkgName prefix of the node in the module
     private void genModuleName(Module module){
         PackagePoint root = module.findRoot();
         if (!root.getLabel().equals("")){
-            //不是新建的节点，只有一棵子树
+            // Not a new node, only a subtree
             PackagePoint pp = module.findSingle(root.getId());
             if (!pp.getPkgName().equals("") && pp.getPkgName().contains("/")){
                 module.setName(pp.getPkgName());
                 return;
             }
         }
-        //新建的节点或者findSingle的节点没找到包名，包含多棵子树，设置几个候选名称
+        // Newly created node or findSingle node did not find package name, or only a short package name node, contains multiple subtrees, set several candidate names
         Map<String,Integer> candi = new HashMap<>();
         recExcept(module, root, candi);
         int max = 0;
@@ -448,14 +453,14 @@ public class MDecouple {
         module.setName(name);
     }
 
-    //递归找非单字节、非空节点
+    // Recursively find non-short single-byte, non-empty nodes
     private void recExcept(Module module, PackagePoint root, Map<String,Integer> map){
         List<Integer> childIDs = root.getChildrenID();
         Map<Integer,PackagePoint> tmp = module.getPackagePoints();
         for (Integer i : childIDs){
             PackagePoint pp = module.findSingle(i);
             String name = pp.getPkgName();
-            if (name.equals("") || !name.contains("/")){
+            if (name.equals("") || (!name.contains("/") && name.length()<4)){
                 recExcept(module, tmp.get(i),map);
             }else{
                 int weight = module.getCTBbyID(i);
@@ -464,7 +469,7 @@ public class MDecouple {
         }
     }
 
-    //输出所有name为空字符串的子模块
+    // Output all submodules whose name is an empty string
     private void outputNoName(){
         for (Module m : this.modules){
             if (m.getName().equals("")){
@@ -477,9 +482,9 @@ public class MDecouple {
         }
     }
 
-    //合并同label和同pkgName的节点，嫁接其子节点
+    // Merge nodes with the same label and the same pkgName, and graft their children
     private void mergeSamePP(List<PackagePoint> ppList, List<Smali> sList){
-        //存储每个smali文件的父节点ID
+        // Store the parent node ID of each smali file
         Map<Integer, List<Smali>> smali2parent = new HashMap<>();
         for (Smali s : sList){
             Integer pID = s.getPpID();
@@ -491,12 +496,12 @@ public class MDecouple {
                 smali2parent.get(pID).add(s);
             }
         }
-        //存储每个PP节点的ID
+        // Store the ID of each PP node
         Map<Integer, PackagePoint> ID2PP = new HashMap<>();
         for (PackagePoint pp : ppList){
             ID2PP.put(pp.getId(), pp);
         }
-        //任意两个节点之间是否满足①parentID一致；②label一致；③pkgName一致且不为空
+        // Does any two nodes meet ①parentID consistent; ②label consistent; ③pkgName consistent and not empty
         for (int i1=0; i1<ppList.size(); i1++){
             for (int i2=i1+1; i2<ppList.size(); i2++){
                 PackagePoint pp1 = ppList.get(i1);
@@ -505,7 +510,7 @@ public class MDecouple {
                     continue;
                 }
                 if (!pp1.equals(pp2) && pp1.getParentId().equals(pp2.getParentId()) && pp1.getLabel().equals(pp2.getLabel()) && pp1.getPkgName().equals(pp2.getPkgName()) && !pp1.getPkgName().equals("")){
-                    //把子节点嫁接到有更多子节点的节点上
+                    // Grafting a child node to a node with more children
                     if (pp1.getChildrenID().size() >= pp2.getChildrenID().size()){
                         Integer newParent = pp1.getId();
                         List<Integer> pp2children = pp2.getChildrenID();
