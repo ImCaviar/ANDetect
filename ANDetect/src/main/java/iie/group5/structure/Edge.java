@@ -12,8 +12,9 @@ public class Edge {
     public boolean equals(Edge edge){
         if (this.parent.equals(edge.getParent()) && this.child.equals(edge.getChild())){
             return true;
+        }else{
+            return false;
         }
-        return false;
     }
 
     public String getParent() {
