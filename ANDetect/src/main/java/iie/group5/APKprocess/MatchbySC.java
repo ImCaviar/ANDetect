@@ -4,10 +4,7 @@ import iie.group5.features.SmithWaterman;
 import iie.group5.structure.*;
 import iie.group5.structure.Module;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 //利用结构、代码特征进行匹配
 public class MatchbySC {
@@ -41,7 +38,7 @@ public class MatchbySC {
         this.sub2smali = new HashMap<>();
     }
 
-    //返回匹配度
+    // Return Match
     public double compAll(){
         compStruct();
         compCode();
@@ -53,11 +50,9 @@ public class MatchbySC {
         genEdges(this.subM, false);
         compEM();
         if (this.EM > 0){
-            //删除没有matchEdge的Twig
-            for (Edge me : this.matchEdge){
-                this.twigAN.removeIf(twig -> !twig.isEdgeIn(me));
-                this.twigSubM.removeIf(twig -> !twig.isEdgeIn(me));
-            }
+            // Remove Twig without matchEdge with iterator
+            deleteNoMatchEdge(this.twigAN);
+            deleteNoMatchEdge(this.twigSubM);
             compDM();
         }else{
             this.DM = 0.0;
@@ -65,17 +60,17 @@ public class MatchbySC {
     }
 
     private void compCode(){
-        //根据两个module分配其节点下对应的smali文件
+        // Assign the corresponding smali files under the two modules according to their nodes
         smali2map(this.AN.getSmalis(), this.an2smali);
         smali2map(this.subM.getSmalis(), this.sub2smali);
-        //比较两个smali列表中的代码匹配度
+        // Compare the code matches in two smali lists
         int lenSL = an2sub.keySet().size();
         if (lenSL == 0){
             this.CM = 0.0;
         }else{
             for (Integer anID : an2sub.keySet()){
-                if (an2smali.containsKey(anID)){
-                    Integer subID = an2sub.get(anID);
+                Integer subID = an2sub.get(anID);
+                if (an2smali.containsKey(anID) && sub2smali.containsKey(subID)){
                     List<Smali> anSL = an2smali.get(anID);
                     List<Smali> subSL = sub2smali.get(subID);
                     this.CM += smaliListSim(anSL, subSL);
@@ -85,14 +80,14 @@ public class MatchbySC {
         }
     }
 
-    //处理Module生成Edge列表和Twig列表，isAN表示是否为广告网络库
+    // Process Module to generate Edge list and Twig list, isAN indicates if it is an ad network library
     private void genEdges(Module module, boolean isAN){
         Map<Integer,PackagePoint> i2p = module.getPackagePoints();
         for (Integer id : i2p.keySet()){
             PackagePoint pp = i2p.get(id);
             List<Integer> children = pp.getChildrenID();
             if (children.size() == 0){
-                //叶子节点，找到twig
+                // Leaf node, find twig
                 Twig twig = new Twig(module.findTwigbyID(id));
                 if (isAN){
                     this.twigAN.add(twig);
@@ -100,7 +95,7 @@ public class MatchbySC {
                     this.twigSubM.add(twig);
                 }
             }else{
-                //非叶子节点，只要不是smali或者classes就可以加入边（该节点和所有子节点）
+                // Non-leaf nodes, as long as they are not smali or classes can join edges (this node and all children)
                 if (!pp.getLabel().contains("smali") && !pp.getLabel().contains("classes")){
                     for (Integer childID : children){
                         Edge edge = new Edge(pp.getLabel(), i2p.get(childID).getLabel());
@@ -115,11 +110,11 @@ public class MatchbySC {
         }
     }
 
-    //计算节点对匹配度，以AN为基准
+    // Calculate the node pair matching degree to AN
     private void compEM(){
         double matched = 0;
         int allEdges = this.edgeAN.size();
-        //每配对一个，就删除edgeSubM中的一个值
+        // Delete one value in edgeSubM for each pair
         for (Edge ane : this.edgeAN){
             if (this.edgeSubM.size() == 0){
                 break;
@@ -137,7 +132,7 @@ public class MatchbySC {
         this.EM = matched/allEdges;
     }
 
-    //计算树枝匹配深度均值，以AN为基准
+    // Calculate the mean value of branch matching depth, based on AN
     private void compDM(){
         double depthSUM = 0;
         int allTwigs = this.twigAN.size();
@@ -154,7 +149,7 @@ public class MatchbySC {
                         maxTwig = subt;
                     }
                 }
-                //只有当最大匹配度大于0.5时才消除子模块树枝，并插入节点对
+                // Eliminate submodule branches and insert node pairs only if the maximum match is greater than 0.5
                 if (maxDM > 0.75){
                     insertPP(ant, maxTwig);
                     this.twigSubM.remove(maxTwig);
@@ -165,7 +160,7 @@ public class MatchbySC {
         }
     }
 
-    //插入匹配树枝的节点对
+    // Insert node pairs of matching tree branches
     private void insertPP(Twig ant, Twig subt){
         int ind = 0;
         while (ind < ant.getTwig().size() && ind < subt.getTwig().size()){
@@ -178,7 +173,7 @@ public class MatchbySC {
         }
     }
 
-    //比较两个树枝的匹配深度
+    // Compare the matching depth of two branches
     private double pctDM(Twig ant, Twig subt){
         double matched = 0;
         int antSize = ant.getTwig().size();
@@ -194,7 +189,7 @@ public class MatchbySC {
         return matched/antSize;
     }
 
-    //根据smali的ppID将其分配到不同节点对应的list中
+    // Assign smali to different node lists according to its ppID
     private void smali2map(List<Smali> smalis, Map<Integer, List<Smali>> id2smali){
         for (Smali s : smalis){
             Integer pID = s.getPpID();
@@ -208,7 +203,7 @@ public class MatchbySC {
         }
     }
 
-    //输入两个Smali列表，如果存在同名文件，则比较同名文件的匹配度并删除，对于剩余的不同名文件，则两两匹配，删除最大匹配对，直到一个列表为空
+    // Input two Smali lists, if there are files with the same name, compare the matches of files with the same name and delete them, for the remaining files with different names, match them two by two and delete the largest matching pair until a list is empty
     private double smaliListSim(List<Smali> anSL, List<Smali> subSL){
         double sumSim = 0;
         double ansAll = anSL.size();
@@ -230,15 +225,15 @@ public class MatchbySC {
         return sumSim/ansAll;
     }
 
-    //输入两个Smali文件，比较文件的匹配度
+    // Enter two Smali files and compare the file matches
     private double match2Smali(Smali anS, Smali subS){
-        //计算字段匹配度
+        // Calculate field matching degree
         String[] anF = anS.getField();
         String[] subF = subS.getField();
         SmithWaterman sw = new SmithWaterman(anF, subF);
         double matchedF = sw.pctMacth();
         int lenF = anF.length;
-        //计算方法匹配度
+        // Calculation method matching degree
         String[] anM = anS.getMethod();
         String[] subM = subS.getMethod();
         sw = new SmithWaterman(anM, subM);
@@ -246,12 +241,30 @@ public class MatchbySC {
         int lenM = anM.length;
         if (lenF == 0 && lenM == 0){
             return 0;
-        }else if (lenF ==0 && lenM != 0){
+        }else if (lenF == 0 && lenM != 0){
             return matchedM/lenM;
-        }else if (lenF !=0 && lenM == 0){
+        }else if (lenM == 0){
             return matchedF/lenF;
         }else{
             return 0.3*matchedF/lenF + 0.7*matchedM/lenM;
+        }
+    }
+
+    // Remove the twig that does not contain the matching edge with an iterator
+    private void deleteNoMatchEdge(List<Twig> twig){
+        Iterator<Twig> iterator = twig.iterator();
+        while (iterator.hasNext()){
+            Twig tw = iterator.next();
+            // del controls whether to delete Twig
+            boolean del = true;
+            for (Edge me : this.matchEdge){
+                if (tw.isEdgeIn(me)){
+                    del = false;
+                }
+            }
+            if (del){
+                iterator.remove();
+            }
         }
     }
 
