@@ -5,7 +5,6 @@
 	<groupId>iie.group5</groupId>
 	<artifactId>ANDetectMaven</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
 	<build>
 		<plugins>
 			<plugin>
@@ -34,7 +33,7 @@
 						</manifest>
 					</archive>
 					<!--指定打出的jar包输出目录-->
-					<outputDirectory>E:\2022HOME\experiments\ANDetect-deploy\ANDetect\target</outputDirectory>
+					<outputDirectory>E:\2022HOME\experiments\ANDetect\target</outputDirectory>
 				</configuration>
 				<executions>
 					<execution>
@@ -75,11 +74,11 @@
 			<version>5.2.0</version>
 		</dependency>
 
-		<dependency>
-			<groupId>commons-logging</groupId>
-			<artifactId>commons-logging</artifactId>
-			<version>1.2</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>commons-logging</groupId>-->
+<!--			<artifactId>commons-logging</artifactId>-->
+<!--			<version>1.2</version>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>ml.dmlc</groupId>
@@ -87,46 +86,16 @@
 			<version>1.7.5</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.apache.spark</groupId>
-			<artifactId>spark-core_2.11</artifactId>
-			<version>2.4.3</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>org.apache.spark</groupId>-->
+<!--			<artifactId>spark-core_2.11</artifactId>-->
+<!--			<version>2.4.3</version>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>com.custom</groupId>
-			<artifactId>arsc-parser</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.custom</groupId>
-			<artifactId>baksmali</artifactId>
-			<version>2.5.2</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.custom</groupId>
-			<artifactId>d8</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.custom</groupId>
-			<artifactId>dx-new</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.custom</groupId>
-			<artifactId>weka</artifactId>
-			<version>3.8.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.custom</groupId>
-			<artifactId>xml2axml</artifactId>
-			<version>1.0.0</version>
+			<artifactId>apktool</artifactId>
+			<version>2.7.0</version>
 		</dependency>
 	</dependencies>
 
