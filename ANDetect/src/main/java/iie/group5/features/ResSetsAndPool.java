@@ -11,19 +11,22 @@ import java.util.Map;
 
 public class ResSetsAndPool {
     private Map<String, ResProcess> anName2ResLib;
-    //只记录无路径匹配特征的tf-idf值
+    // Record only the tf-idf values without path matching features
     private Map<String, Map<String, Double>> an2tfidf;
+    // where the maximum value, used to normalize tf-idf
+    private double maxTI;
 
     public ResSetsAndPool() throws IOException, CsvValidationException {
         anName2ResLib = new HashMap<>();
         an2tfidf = new HashMap<>();
+        maxTI = 0;
         genResSets();
         genResPool();
     }
 
     private void genResSets() throws IOException, CsvValidationException {
-        CSVReader reader = new CSVReader(new FileReader("resources/features/res_feature_sets.csv"));
-        //第一行是header
+        CSVReader reader = new CSVReader(new FileReader("src/main/resources/features/res_feature_sets.csv"));
+        // The first line is the header
         String[] nextLine = reader.readNext();
         while ((nextLine = reader.readNext()) !=null){
             String anName = nextLine[0];
@@ -31,12 +34,15 @@ public class ResSetsAndPool {
             String value = nextLine[2];
             Double weight = Double.parseDouble(nextLine[3]);
             processSet(anName, path, value, weight);
+            if (weight.floatValue() > maxTI){
+                maxTI = weight;
+            }
         }
     }
 
     private void genResPool() throws IOException, CsvValidationException {
-        CSVReader reader = new CSVReader(new FileReader("resources/features/res_pic_pool.csv"));
-        //第一行是header
+        CSVReader reader = new CSVReader(new FileReader("src/main/resources/features/res_pic_pool.csv"));
+        // The first line is the header
         String[] nextLine = reader.readNext();
         while ((nextLine = reader.readNext()) !=null){
             String anName = nextLine[0];
@@ -86,19 +92,19 @@ public class ResSetsAndPool {
             case "AndroidManifest.xml_manifest application receiver_android:name":
                 resP.addReceiver(value);
                 break;
-            case "res/values/values.xml_resources dimen_name":
+            case "res\\values\\values.xml_resources dimen_name":
                 resP.addDimen(value);
                 tfidfs.put(value, weight);
                 break;
-            case "res/values/values.xml_resources string_name":
+            case "res\\values\\values.xml_resources string_name":
                 resP.addStringn(value);
                 tfidfs.put(value, weight);
                 break;
-            case "res/values/values.xml_resources declare-styleable attr_name":
+            case "res\\values\\values.xml_resources declare-styleable attr_name":
                 resP.addAttr(value);
                 tfidfs.put(value, weight);
                 break;
-            case "res/values/values.xml_resources style_name":
+            case "res\\values\\values.xml_resources style_name":
                 resP.addStyle(value);
                 tfidfs.put(value, weight);
                 break;
@@ -111,5 +117,9 @@ public class ResSetsAndPool {
 
     public Map<String, Map<String, Double>> getAn2tfidf() {
         return an2tfidf;
+    }
+
+    public double getMaxTI() {
+        return maxTI;
     }
 }
