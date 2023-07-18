@@ -16,6 +16,6 @@ $ java -jar ANDetect.jar -a [APK name] -o [output file name]
 <br />where [APK name] refers to the target APK and the result will be written to [output file name] 
 
 ## Result
- 1. The APK is encrypted or not.
+<br />1. The APK is encrypted or not.
 <br />2. If encrypted, ANDetect analyzes APK by resource features and gives the name of Ad networks.
 <br />3. If not-encrypted, ANDetect analyzes APK by structural and semantic features and gives the name as well as version of Ad networks.
