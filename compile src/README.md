@@ -1,11 +1,11 @@
-#The environment to run the source code:#
+# The environment to run the source code:
 
 1. OS: Windows 10 or Windows 11
 2. JDK: JDK 11
 3. Running tool: IntelliJ IDEA(≥2020.1.4)
 
 
-#The steps of compiling the source code of ANDetect:#
+# The steps of compiling the source code of ANDetect:
 
 *STEP0: Unzip ANDetect.zip. and resources.zip.*
 
