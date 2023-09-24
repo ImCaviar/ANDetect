@@ -10,7 +10,7 @@
 *STEP0: Unzip ANDetect.zip. and resources.zip.*
 
 *STEP1: Add apktool-2.7.0.jar to local maven repository.*
-mvn install:install-file -Dfile=[the path of apktool-2.7.0.jar] -DgroupId=com.custom -DartifactId=apktool -Dversion=2.7.0 -Dpackaging=jar
+</br>mvn install:install-file -Dfile=[the path of apktool-2.7.0.jar] -DgroupId=com.custom -DartifactId=apktool -Dversion=2.7.0 -Dpackaging=jar
 
 *STEP2: Change the output directory in line 33 of pom.xml.*
 Change 'E:\target' to suitable path as the result of ANDetect.jar.
