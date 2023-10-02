@@ -27,3 +27,7 @@
 </br>Then, the jar will be generated in the path given in STEP2.
 </br>Change the name of ANDetectMaven-0.0.1-SNAPSHOT.jar as 'ANDetect.jar'.
 </br>Eventually, you can run ANDetect.jar in Ubuntu with the guidance given in 'tool'. Notably, when running ANDetect.jar, the package of 'resources' should be placed in the same directory.
+
+# Documentation
+
+'documentation.md' shows the detailed information of every module in ANDetect.
