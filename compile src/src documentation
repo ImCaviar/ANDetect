@@ -1,7 +1,19 @@
 The function of src code is mainly divided into 5 parts, ANDMain, APKprocess, features, structure and TTPprocess.
-# ANDMain
+
+# ANDMain.java
+The main class of the project. The function of 'parseAPK' is the core module to parse an APK. Firstly, the input APK is decompiled by Apktool. The resource features and host package of the decompiled APK are given by `resProcess.parseRes(AM_path, pub_path, output_path)`. Then we input the host package to decoupling module and discern app encryption. If the app is unencrypted, all of the classes will be partitioned to different sub-modules through Louvain. Recognize the Ad Networks behaviour of every sub-module by three XGboost models in function 'getCandiAN' and generate the candidate of sub-modules which act like Ad Networks. The class and structure features of candidate will be matched with every ad lib in database and the most similar ad lib will be picked as the detection result. If the app is encrypted, the resource features will be used to detect ad libs by `mr.compMaxMatch(thresh, pc)`.
 
 # APKprocess
+## APK2dir.java
+This module calls the main function in Apktool and parses the original APK to resource files and smali files.
+## MatchbyRes.java
+This module matches the advertising libs by resource features. The core function is 'compSim' witch computes the resource features' similarity between the APK and every ad lib in database. The similarity of F1 is given by function 'fullDomain' which is related to **global search** in Section 3.5. The similarity of stable features F2-4 and image names is given by funtion 'fullMatch' which is related to **full-path method**. The similarity of variable features F5-7 is given by function 'weightEdit' which is also related to **full-path method**. The similarity of F8-11 is given by function 'ignorePath' which is related to **no-path method**. Finally, the features are divided into strong association features (F1, and F5-7) and weak association features (F2-4, F8-11, and image names) and used to compute the final similarity score between APK and an ad lib via a process of weighted summation and normalization.
+## MatchbySC.java
+This module matched the class and structure features between APK and an ad lib using Smith-Waterman algorithm. According to the similarity between the features, this class gives the result of whether the sub-module comes from the certain ad lib.
+## MDecouple.java
+This module discerns the app encryption and partitions the whole code to sub-modules by Louvain accroding to the call and inheritance relationship. Then the bottom-up merging algorithm is used in function 'mergeComm' to merge nodes from the same community.
+## ResProcess.java
+This module extracts F1-11 and image names from the resource files in an APK. F1-7 are extracted from AndroidManifest.xml while F8-11 are extracted from values.xml. The image names are collected in assets and res directory.
 
 # features
 
